@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4165543465696150291
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7699368943644618398}
+  - component: {fileID: 1306948335560172110}
+  m_Layer: 6
+  m_Name: ObjectPooler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7699368943644618398
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4165543465696150291}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -3.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1306948335560172110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4165543465696150291}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff0928381a0304783ac704d6ef6ae1ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pooledObjects:
+  - ammountToPool: 30
+    pooledObjPrefab: {fileID: 1777092656929224787, guid: 6431cc751e26c4ca494192f14e4ed4f6, type: 3}
+  - ammountToPool: 30
+    pooledObjPrefab: {fileID: 7463374631038246445, guid: f53256cf67ebe41238a91051d51a539c, type: 3}
+  - ammountToPool: 30
+    pooledObjPrefab: {fileID: 8904384935305461590, guid: fff542d9e74b749b2a662e6cdb26deea, type: 3}
+  - ammountToPool: 30
+    pooledObjPrefab: {fileID: 8559084241221279014, guid: 8e83006b931494924b971616f1e4bc55, type: 3}
+  - ammountToPool: 30
+    pooledObjPrefab: {fileID: 193707666682308128, guid: 63a0c1ed586dd40c19e9cc638a6e9d5d, type: 3}
+  - ammountToPool: 30
+    pooledObjPrefab: {fileID: 1974060792461469227, guid: 54c6d2c70df9242e78242f2248d13dd2, type: 3}
+  - ammountToPool: 30
+    pooledObjPrefab: {fileID: 6827348509028659557, guid: 37116a7ccb798415699552d03b988dcc, type: 3}
+  parentTransform: []
