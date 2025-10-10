@@ -9,7 +9,6 @@ public class GameManager : MonoBehaviour
 	public static GameManager instance;
 
 	[Header ("References")]
-	public List<Transform> players;
 	public CameraController cameraController;
 
 	[Header ("UI")]
@@ -149,22 +148,12 @@ public class GameManager : MonoBehaviour
 		SceneManager.LoadScene (SceneManager.GetActiveScene().buildIndex);
 	}
 
-	void InitializePlayers ()
-	{
-		var playerObjects = GameObject.FindGameObjectsWithTag ("Player");
-
-		foreach (var obj in playerObjects)
-		{
-			players.Add (obj.transform);
-		}
-	}
 
 	IEnumerator StartGameRoutine ()
 	{
 		gameState = GameState.Prepare;
 		yield return new WaitForSeconds (4);
 		// Start Game
-		InitializePlayers ();
 		autoMoveCameraCurrentTime = 0;
 		gameState = GameState.Started;
 	}

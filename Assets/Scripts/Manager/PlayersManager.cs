@@ -5,9 +5,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 
-public class InputManager : MonoBehaviour
+public class PlayersManager : MonoBehaviour
 {
-    public static InputManager instance;
+    public static PlayersManager instance;
     [SerializeField] private Transform[] spawnPoints;
     [SerializeField] private GameObject playerPrefab;
     [SerializeField] private int playerCount;
@@ -97,12 +97,13 @@ public class InputManager : MonoBehaviour
 
         PlayerInput newPlayer = PlayerInput.Instantiate(
             prefab: playerPrefab,
-            playerIndex: -1, // Deja que el Manager asigne el índice
+            playerIndex: -1,
             controlScheme: schemeName,
             pairWithDevice: device
         );
 
         newPlayer.transform.position = spawnPoints[playerCount].transform.position;
+        PlayerController playerController = newPlayer.gameObject.GetComponent<PlayerController>();
         playerCount++;
 
         newPlayer.SendMessage("OnAssignedScheme", schemeName, SendMessageOptions.DontRequireReceiver);
@@ -120,9 +121,9 @@ public class InputManager : MonoBehaviour
 
     private class InputControlObserver : IObserver<InputControl>
     {
-        private InputManager manager;
+        private PlayersManager manager;
 
-        public InputControlObserver(InputManager manager)
+        public InputControlObserver(PlayersManager manager)
         {
             this.manager = manager;
         }

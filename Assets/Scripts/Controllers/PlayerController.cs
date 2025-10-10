@@ -10,9 +10,13 @@ public class PlayerController : MonoBehaviour
 
 	//Components and State Values
 	private Rigidbody2D rb;
-	private Animator animator;
-	[SerializeField] private Vector2 currentVelocity;
+	private Vector2 currentVelocity;
 	private float velocitySmoothing;
+
+	//Ground Checkers
+	[SerializeField] private float raycastDistance = 0.55f;
+	[SerializeField] private float checkSpacing = 0.2f;
+	[SerializeField] private LayerMask groundLayer;
 
 	//Timers
 	private float coyoteTimeTimer;
@@ -26,7 +30,7 @@ public class PlayerController : MonoBehaviour
 	private InputAction moveInput;
 	private float moveDirection;
 	private InputAction jumpInput;
-	[SerializeField] private bool isGrounded;
+	private bool isGrounded;
 	private bool isHoldingJump;
 
 	//InputSystem
@@ -39,16 +43,21 @@ public class PlayerController : MonoBehaviour
 		playerInput = GetComponent<PlayerInput>();
 		InitializeInputActions(playerInput.currentActionMap);
 
-		animator = GetComponent<Animator>();
 		rb = GetComponent<Rigidbody2D>();
 
 		rb.gravityScale = 0f;
 		rb.freezeRotation = true;
 
+		CalculateValues();
+	}
+
+	public void CalculateValues()
+	{
 		calculatedGravity = 2 * valuesSO.peakHeight / -(valuesSO.timeToPeak * valuesSO.timeToPeak);
 
 		calculatedInitialJumpVelocity = -calculatedGravity * valuesSO.timeToPeak;
 	}
+
 	private void InitializeInputActions(InputActionMap inputActions)
 	{
 		moveInput = playerInput.actions.FindAction("Move");
@@ -58,7 +67,7 @@ public class PlayerController : MonoBehaviour
 		jumpInput.started += OnJumpStarted;
 		jumpInput.canceled += OnJumpCanceled;
 		jumpInput.Enable();
-    }
+	}
 
     void OnDestroy()
     {
@@ -81,11 +90,13 @@ public class PlayerController : MonoBehaviour
 	}
 
 
-    void Update()
-    {
+	void Update()
+	{
 		UpdateHorizontalDirection();
 
 		UpdateJumpValues();
+
+		CheckGround();
 
 		HandleJump();
     }
@@ -109,20 +120,41 @@ public class PlayerController : MonoBehaviour
         }
 	}
 
-    private void HandleJump()
-    {
-        bool canJump = jumpBufferTimer > 0f && coyoteTimeTimer > 0f;
+	private void CheckGround()
+	{
+		Vector2 pos = transform.position;
+		RaycastHit2D hit = Physics2D.Raycast(new Vector2(pos.x - checkSpacing, pos.y), Vector2.down, raycastDistance, groundLayer);
+		RaycastHit2D hit2 = Physics2D.Raycast(new Vector2(pos.x + checkSpacing, pos.y), Vector2.down, raycastDistance, groundLayer);
 
-        if (canJump)
-        {
-            currentVelocity.y = calculatedInitialJumpVelocity;
+		isGrounded = hit.collider || hit2.collider;
+	}
+
+    void OnDrawGizmos()
+    {
+		Gizmos.color = Color.yellow;
+
+		float gizmos1 = transform.position.x - checkSpacing;
+        Gizmos.DrawLine(new Vector2(gizmos1, transform.position.y), new Vector2(gizmos1, transform.position.y - raycastDistance));
+
+		float gizmos2 = transform.position.x + checkSpacing;
+        Gizmos.DrawLine(new Vector2(gizmos2, transform.position.y), new Vector2(gizmos2, transform.position.y - raycastDistance));
+    }
+
+    private void HandleJump()
+	{
+		bool canJump = jumpBufferTimer > 0f && coyoteTimeTimer > 0f;
+
+		if (canJump)
+		{
+			currentVelocity.y = calculatedInitialJumpVelocity;
+			SoundManager.instance.PlaySound("jump");
 
 			isGrounded = false;
-            
-            jumpBufferTimer = 0f;
-            coyoteTimeTimer = 0f; 
-        }
-    }
+
+			jumpBufferTimer = 0f;
+			coyoteTimeTimer = 0f;
+		}
+	}
 
 	void FixedUpdate()
 	{
@@ -167,16 +199,6 @@ public class PlayerController : MonoBehaviour
 			currentVelocity.y += calculatedGravity * (valuesSO.lowJumpMultiplier - 1f) * Time.deltaTime;
 		}
     }
-	
-    private void OnCollisionStay2D(Collision2D collision)
-	{
-		isGrounded = true;
-	}
-
-    private void OnCollisionExit2D(Collision2D collision)
-    {
-        isGrounded = false;
-    }
 
 	public void OnAssignedScheme(string schemeName)
 	{
@@ -191,33 +213,16 @@ public class PlayerController : MonoBehaviour
 	{
 		if (assignedScheme != "Gamepad")
 		{
-			InputManager.instance.FreeKeyboardScheme(assignedScheme);
+			PlayersManager.instance.FreeKeyboardScheme(assignedScheme);
 		}
 	}
 
-
-	// 	Components
-	//  public float moveSpeed = 2f;
-	//  public float jumpForce = 10f;
-	//  private bool isGrounded;
-
-	// 	private Rigidbody2D rb;
-	// 	[SerializeField] private Animator animator;
-	// 	[SerializeField] private Transform spriteTransform;
-	// 	public LayerMask groundLayer;
-	//  public float raycastDistance = 0.1f;
-
-	// 	float horizontalInput = 0f;
-	// 	float controllerInputDeathZone = 0.1f;
 
 	// 	// Block placing
 	// 	BlockScript currentBlockHolding = null;
 	// 	float cooldownTime = 3;
 	// 	float cooldownCurrentTime = 0;
 	// 	Vector2 placeBlockPosition = new Vector2 (0.5f, -0.47f);
-
-	// 	public AnimatorController blueAnimator;
-	// 	public AnimatorController orangeAnimator;
 
 	// 	PoolingManager blocksPool => GameManager.instance.blocksPool;
 
@@ -230,7 +235,6 @@ public class PlayerController : MonoBehaviour
 
 	// 	void Start()
 	//     {
-	// 		animator.runtimeAnimatorController = orangeAnimator;
 	// 		nextBlockNumber = Random.Range(0, blocksPool.pooledObjects.Count - 1);
 	//     }
 
@@ -239,48 +243,6 @@ public class PlayerController : MonoBehaviour
 
 	//     void Update()
 	//     {
-	// 		Vector2 pos = transform.position;
-	// 		RaycastHit2D hit = Physics2D.Raycast(new Vector2(pos.x - 0.25f, pos.y - 0.51f) , Vector2.down, raycastDistance, groundLayer);
-	// 		RaycastHit2D hit2 = Physics2D.Raycast(new Vector2(pos.x + 0.25f, pos.y - 0.51f) , Vector2.down, raycastDistance, groundLayer);
-
-	// 		isGrounded = hit.collider || hit2.collider;
-
-	// 		animator.SetBool ("isGrounded", isGrounded);
-	//         Debug.DrawRay(new Vector2(pos.x - 0.25f, pos.y - 0.51f), Vector2.down * raycastDistance, Color.cyan);
-	//         Debug.DrawRay(new Vector2(pos.x + 0.25f, pos.y - 0.51f), Vector2.down * raycastDistance, Color.cyan);
-
-	// 		// Read Movement input
-	// 	 	horizontalInput = Input.GetAxis(playerTag + "Horizontal");
-
-	// 		string jumpButton = (playerTag == "Player1") ? "Player1Jump" : "Player2Jump";
-	//         if (Input.GetButtonDown(jumpButton) && isGrounded)
-	//         {
-	// 			Debug.Log ("TARAO");
-	// 			// Jump
-	// 			rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-	// 			SoundManager.instance.PlaySound("jump");
-	// 			// SONIDO DE JUMP
-	// 		}
-
-	// 		// Flip sprite
-	// 		if (horizontalInput < -controllerInputDeathZone && rb.linearVelocity.x < 0)
-	// 		{
-	// 			xLocalScale = -1;
-	// 			// spriteTransform.transform.localScale = new Vector3 (xLocalScale, 1, 1);
-	// 			animator.SetBool ("run", true);
-	// 		}
-	// 		else if (horizontalInput > controllerInputDeathZone && rb.linearVelocity.x > 0)
-	// 		{
-	// 			xLocalScale = 1;
-	// 			animator.SetBool ("run", true);
-	// 		}
-	// 		else
-	// 		{
-	// 			animator.SetBool ("run", false);
-	// 		}
-
-	// 		spriteTransform.transform.localScale = new Vector3 (xLocalScale, 1, 1);
-
 	// 		// Place blocks input
 	// 		KeyCode placeButton = (playerTag == "Player1") ? KeyCode.F : KeyCode.RightShift;
 
@@ -334,13 +296,6 @@ public class PlayerController : MonoBehaviour
 	// 		}
 	//     }
 
-
-
-
-	// 	void FixedUpdate()
-	// 	{
-	// 		rb.linearVelocity = new Vector2 (horizontalInput * moveSpeed, rb.linearVelocity.y);
-	// 	}
 
 
 

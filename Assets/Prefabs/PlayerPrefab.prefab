@@ -50,7 +50,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   valuesSO: {fileID: 11400000, guid: 7dd54a8ef4e502444b0e082693e12d69, type: 2}
-  isGrounded: 0
+  raycastDistance: 0.55
+  checkSpacing: 0.2
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!50 &8124305224974726577
 Rigidbody2D:
   serializedVersion: 5
@@ -66,7 +70,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_GravityScale: 3
+  m_GravityScale: 1
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -75,9 +79,9 @@ Rigidbody2D:
     serializedVersion: 2
     m_Bits: 0
   m_Interpolate: 0
-  m_SleepingMode: 0
+  m_SleepingMode: 1
   m_CollisionDetection: 1
-  m_Constraints: 4
+  m_Constraints: 0
 --- !u!95 &8470359745363481322
 Animator:
   serializedVersion: 7

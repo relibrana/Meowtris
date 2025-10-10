@@ -16,8 +16,8 @@ MonoBehaviour:
   accelerationTime: 0.1
   decelerationTime: 0.1
   peakHeight: 4
-  timeToPeak: 1
-  fallMultiplier: 0.8
-  lowJumpMultiplier: 0.1
+  timeToPeak: 0.4
+  fallMultiplier: 2.5
+  lowJumpMultiplier: 2
   coyoteTime: 0.15
   jumpBufferTime: 0.15
