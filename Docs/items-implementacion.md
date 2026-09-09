@@ -10,7 +10,8 @@
 - **`ItemsPoolSO`** — pool con pesos por ítem (palanca "Distribución" del doc). La cápsula tira de aquí; sin asset asignado cae al azar uniforme viejo.
 - **Dos tipos de premio de cápsula:**
   - `HoldableItem` — va a la mano y sustituye el bloque (bomba, disco, lanzables).
-  - `IInstantItem` — se aplica al instante al romper la cápsula y **conservas tu bloque** (estados propios: súper patada, POW, papa, teleporte, yunque, metálico, doble salto).
+  - `IInstantItem` — se aplica al instante al romper la cápsula y **conservas tu bloque** (estados propios: súper patada, papa, yunque, metálico, doble salto).
+  - **Excepciones (sep 2026), por petición de diseño (la activación automática confundía):** el **teleporte** pasó a `HoldableItem` (se lleva en la mano y lo activas con el botón de colocar) y el **POW** pasó a `ThrowableItem` (se lanza como el moco y la cuenta atrás arranca en el impacto).
 - **`PlayerItemState`** — base de estados con temporizador en el jugador: tinte placeholder, limpieza automática al morir o acabar la ronda (`isOnGame`), y hooks a `PlayerMovement` (multiplicadores de velocidad/salto/gravedad, salto aéreo, congelación) y `PlayerController` (bloqueo de input, inmunidad a empujes).
 - **`ThrowableItem`** — lanzables: se llevan en la mano y con el botón de colocar se **lanzan** (sin checks de suelo/overlap). Apuntado v1 = dirección del sprite + ángulo fijo serializado (no existe input de apuntar; Move es un eje 1D).
 
@@ -22,12 +23,12 @@ Todo vive en `Assets/Prefabs/Items/`. `Assets/SOs/ItemsPool.asset` ya tiene las 
 |---|---|---|
 | `BombItem` (existente) | 20 | sin cambios |
 | `SpringDisc` (= **Llanta**, ítem 5) | 12 | ahora lanzable: vel 12, ángulo 25°, grav 2 · conserva su rebote (25,35) y squash/recoil · empuje al impactar en vuelo (8,6) |
-| `MocoProjectile` | 12 | lanzamiento: vel 12, ángulo 25°, grav 2 · 8 pulsaciones, tope 3 s, trampa un solo uso ✔ |
+| `MocoProjectile` | 12 | lanzamiento: vel 12, ángulo 25°, grav 2 · barra de 8 puntos (patada 2, movimiento 1, descarga 3/s), tope 3 s, trampa un solo uso ✔ |
 | `DoubleJumpPickup` | 12 | duración 6 s, altura 2º salto ×0.85, repetible ✔ |
-| `TeleportPickup` | 10 | altura 2.5, capas ocupadas = Ground+Block |
-| `PowPickup` | 8 | cuenta desde 3, stun 2 s |
-| `MetalChickenPickup` | 5 | duración 6 s, salto ×0.75, gravedad ×1.6, patada ×1.6 |
-| `HotPotatoPickup` | 4 | mecha 8 s, vel ×1.3, radio 2.5, empuje 12, capas explosión = Player+Block |
+| `TeleportPickup` | 10 | **en mano**, se activa con el botón de colocar · destino = jugador vivo más alto · altura 2.5, capas ocupadas = Ground+Block, +1 salto aéreo al llegar |
+| `PowPickup` | 8 | **lanzable**: vel 12, ángulo 25°, grav 2 · la cuenta atrás arranca al impactar · cuenta desde 3, stun 2 s |
+| `MetalChickenPickup` | 5 | duración 6 s, salto ×1 (**no se recorta**), gravedad general ×1, gravedad de caída ×1.8, patada ×3, sin planeo |
+| `HotPotatoPickup` | 4 | **ventana absoluta** 8 s (no se resetea al pasarla), vel ×1.3, radio 2.5, empuje 12, capas explosión = Player+Block · **se pasa pateando**, no por contacto |
 | `SuperKickPickup` | 4 | duración 4 s (3–5), daño a bloques 3, empuje ×1.5 |
 | `AnvilPickup` | 3 | vel caída 14, telegrafiado 1 s, no se detiene al matar; referencia a `Anvil.prefab` (kinemático + trigger, layer Ground) |
 
@@ -36,8 +37,8 @@ Para probar un ítem aislado: su peso a 100 y el resto a 0. Opcional: añadir pr
 **Checklist de verificación al abrir Unity** (los prefabs/asset se escribieron por YAML a mano):
 1. Los prefabs de `Assets/Prefabs/Items/` abren sin warnings y su script está asignado (no "Missing Script").
 2. `ItemsPool.asset` muestra las 10 entradas con prefab y peso (ninguna en None).
-3. En los lanzables, los campos `colliders`/`rb2d`/`spriteRenderers` apuntan a sus propios componentes.
-4. Los sprites son el de la bomba tintado (moco verde, llanta oscura, yunque gris) — placeholder hasta tener arte.
+3. En los lanzables **y en los dos prefabs reconstruidos en sep 2026** (`TeleportPickup` como holdable y `PowPickup` como lanzable: raíz con Rigidbody2D + hijo `Sprite` con SpriteRenderer y CircleCollider2D), los campos `colliders`/`rb2d`/`spriteRenderers` apuntan a sus propios componentes.
+4. Los sprites son el de la bomba tintado (moco verde, llanta oscura, yunque gris, teleporte morado, POW amarillo) — placeholder hasta tener arte.
 
 POW crea su propio canvas en runtime (placeholder hasta integrarlo a UIManager). Ningún otro sistema requiere tocar escenas.
 
@@ -45,19 +46,19 @@ POW crea su propio canvas en runtime (placeholder hasta integrarlo a UIManager).
 
 1. **Pool**: pesos 100/0 reparten como se espera; sin asset asignado la cápsula sigue funcionando como antes.
 2. **Súper patada**: tinte naranja; patada mata al rival (no a ti); rompe sub-bloques de una; parpadea el último segundo; expira limpio; morir con el estado activo no deja el tinte pegado.
-3. **POW**: countdown visible para todos; al llegar a 0, sólo se aturden los que tocan suelo (saltar lo esquiva); el que lo activó también cae; los aturdidos no se mueven/patean/colocan ~2 s pero siguen cayendo por gravedad.
-4. **Moco**: impacto a jugador lo congela en el sitio (ni gravedad); mash de patada lo libera antes; a los 3 s se libera solo (accesibilidad); impacto en pared/bloque deja mancha verde que atrapa al que la toca; tras liberarse hay ~1 s de inmunidad a re-pegarse.
+3. **POW**: se lleva en la mano y se lanza; **la cuenta atrás sólo arranca cuando el proyectil impacta** (contra lo que sea), no al romper la cápsula; countdown visible para todos; al llegar a 0, sólo se aturden los que tocan suelo (saltar lo esquiva); el que lo lanzó también cae si está en el suelo; los aturdidos no se mueven/patean/colocan ~2 s pero siguen cayendo por gravedad.
+4. **Moco**: impacto a jugador lo congela en el sitio (ni gravedad); se sale llenando la barra de forcejeo — **patada 2 puntos, izquierda/derecha 1 punto**, y la barra se descarga sola a 3 puntos/s, así que hay que machacar rápido (el tinte se aclara según se llena); a los 3 s se libera solo (accesibilidad); impacto en pared/bloque deja mancha verde que atrapa al que la toca; tras liberarse hay ~1 s de inmunidad a re-pegarse.
 5. **Llanta**: vuela con arco; pega en pared/bloque y queda fija toda la ronda; rebota a CUALQUIER jugador (portador incluido); si golpea a un jugador en vuelo lo empuja y queda suspendida ahí.
-6. **Papa caliente**: portador más rápido y pulsando rojo (acelera al agotarse); tocar a otro la transfiere con el tiempo restante (0.5 s de gracia anti ping-pong); al expirar el portador muere y los cercanos salen empujados + bloques dañados; morir por otra causa NO explota.
-7. **Teleporte**: apareces ~2.5 sobre un rival vivo al azar; si arriba hay bloques, busca hueco más arriba; sin rivales vivos no hace nada.
+6. **Papa caliente**: portador más rápido y pulsando rojo. **El temporizador es una ventana absoluta**: arranca cuando aparece la papa y no se reinicia con los traspasos — pasa de mano en mano con el tiempo que queda y el parpadeo sigue acelerando desde donde iba. **Patear a otro** la transfiere (0.5 s de gracia anti ping-pong); chocar con él NO hace nada; al llegar a cero muere quien la tenga en ese instante, da igual hace cuánto se la pasaron, y los cercanos salen empujados + bloques dañados; morir por otra causa NO explota.
+7. **Teleporte**: se queda en la mano hasta que lo activas con el botón de colocar (desde el suelo o en el aire); apareces ~2.5 sobre el **rival vivo que va más alto**; si arriba hay bloques, busca hueco más arriba; al llegar recibes **1 salto aéreo de un solo uso** para poder reaccionar; sin rivales vivos se consume sin efecto.
 8. **Yunque**: aparece parpadeando arriba de tu columna ~1 s; cae recto matando jugadores (tú incluido si te quedas debajo) y borrando los sub-bloques que atraviesa; sigue hasta abajo y despawnea.
-9. **Metálico**: salto más bajo y caída pesada; patadas/bombas/muelles no lo empujan (la bomba SÍ lo mata); su patada empuja más fuerte; expira limpio.
+9. **Metálico**: **el salto es el mismo que el de un pollo normal** (referencia: Mario metálico) pero la caída es mucho más pesada y no planea; patadas/bombas/muelles no lo empujan (la bomba SÍ lo mata); su patada empuja bastante más fuerte; expira limpio.
 10. **Doble salto**: un salto extra en el aire (recargable al aterrizar por default); sirve para recuperarse tras una patada; interactúa con el planeo (mantener salto tras el 2º salto planea — validar sensación, doc §A.4).
 11. **Combos**: súper patada + metálico multiplican empuje; aturdido puede recibir la papa; morir en cualquier estado limpia tintes y multiplicadores.
 
 ## Decisiones v1 — validar con los design leads
 
-1. **Activación al recoger**: no hay inventario ni botón de "usar ítem"; los estados/globales se activan al romper la cápsula (el timing = cuándo la pateas). ¿Se quiere inventario con botón de uso?
+1. **Activación al recoger**: no hay inventario ni botón de "usar ítem"; los estados/globales se activan al romper la cápsula (el timing = cuándo la pateas). **Teleporte y POW ya son la excepción (sep 2026): van a la mano y los activa el jugador.** Pendiente: ¿se lleva el mismo patrón al resto de instantáneos?
 2. **Apuntado v1 = dirección + ángulo fijo**: no existe input de apuntar (Move es 1D). ¿Se añade apuntado real (stick/8-way) al esquema de controles?
 3. **La bomba sigue siendo colocable** (como en build), aunque el doc la describe como proyectil apuntado. Con `ThrowableItem` hecho, la versión lanzada es ~1 h — pero cambia una mecánica ya shippeada: decisión de diseño.
 4. Los ítems instantáneos **no sustituyen el bloque en mano** (antes la cápsula siempre lo sustituía).

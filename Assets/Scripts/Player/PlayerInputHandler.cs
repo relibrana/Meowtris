@@ -30,6 +30,13 @@ public sealed class PlayerInputHandler : MonoBehaviour
     /// <summary>Fired when the player presses PlaceBlock.</summary>
     public event Action OnPlaceBlockPressed;
 
+    /// <summary>
+    /// Fired on a *fresh* directional press: the axis leaving neutral or
+    /// flipping side. Holding a key does not re-fire — the struggle mechanics
+    /// count presses, not held input.
+    /// </summary>
+    public event Action OnMovePressed;
+
     // ── Private state ─────────────────────────────────────────────────────────
 
     private PlayerInput _playerInput;
@@ -165,8 +172,14 @@ public sealed class PlayerInputHandler : MonoBehaviour
 
     // ── Input callbacks ───────────────────────────────────────────────────────
 
-    private void OnMovePerformed(InputAction.CallbackContext ctx) =>
+    private void OnMovePerformed(InputAction.CallbackContext ctx)
+    {
+        float previous = _moveDirection;
         _moveDirection = ctx.ReadValue<float>();
+
+        if (_moveDirection != 0f && (previous == 0f || Mathf.Sign(previous) != Mathf.Sign(_moveDirection)))
+            OnMovePressed?.Invoke();
+    }
 
     private void OnMoveCanceled(InputAction.CallbackContext ctx) =>
         _moveDirection = 0f;

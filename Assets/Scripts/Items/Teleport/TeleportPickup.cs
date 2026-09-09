@@ -1,13 +1,15 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Teleporte capsule reward (item catalog #7). Teleports the user above a
-/// random other alive player — no position swap. If the space above the target
-/// is blocked, nudges upward until a clear spot is found (doc's open edge case,
-/// resolved as "closest free spot above").
+/// Teleporte (item catalog #7). Cambios de diseño (sep 2026):
+/// · No se activa al romper la cápsula: se lleva en la mano y el jugador lo
+///   dispara cuando quiere con el botón de colocar bloque.
+/// · El destino NO es un rival al azar: es el jugador vivo que va MÁS ALTO.
+/// · Apareces por encima de él y recibes un salto aéreo de un solo uso, para
+///   que la reaparición dé opción a reaccionar en vez de ser una caída seca.
+/// Si el hueco de arriba está ocupado, sube hasta encontrar sitio libre.
 /// </summary>
-public sealed class TeleportPickup : MonoBehaviour, IInstantItem
+public sealed class TeleportPickup : HoldableItem
 {
     [Header("Teleporte")]
     [SerializeField, Min(0.5f), Tooltip("Altura sobre el jugador objetivo a la que apareces.")]
@@ -25,9 +27,27 @@ public sealed class TeleportPickup : MonoBehaviour, IInstantItem
     [SerializeField, Min(1), Tooltip("Máximo de intentos de hueco antes de teletransportar igual.")]
     private int maxNudges = 8;
 
-    public void Apply(PlayerController player)
+    [SerializeField, Min(0), Tooltip("Saltos aéreos de un solo uso que se conceden al teletransportarse.")]
+    private int grantedAirJumps = 1;
+
+    /// <summary>Nunca se coloca: se consume al activarlo, desde el suelo o en el aire.</summary>
+    public override bool BypassPlacementChecks => true;
+
+    /// <summary>
+    /// El botón de colocar bloque activa el ítem en vez de colocarlo.
+    /// No se llama a base.PlaceHoldable(): no hay nada que dejar en el mundo.
+    /// </summary>
+    public override void PlaceHoldable()
     {
-        PlayerController target = PickRandomTarget(player);
+        Activate(Owner);
+        gameObject.SetActive(false);
+    }
+
+    private void Activate(PlayerController user)
+    {
+        if (user == null) return;
+
+        PlayerController target = PickHighestTarget(user);
         if (target == null) return;
 
         Vector2 destination = (Vector2)target.transform.position + Vector2.up * appearHeight;
@@ -40,21 +60,31 @@ public sealed class TeleportPickup : MonoBehaviour, IInstantItem
             destination += Vector2.up * nudgeStep;
         }
 
-        player.TeleportTo(destination);
+        user.TeleportTo(destination);
+
+        if (grantedAirJumps > 0)
+            user.GrantAirJump(grantedAirJumps);
+
+        // SFX pendiente: los ítems nuevos aún no tienen claves propias (ver Docs/items-implementacion.md).
     }
 
-    private static PlayerController PickRandomTarget(PlayerController self)
+    /// <summary>Highest living rival. Ties resolve to whoever is found first.</summary>
+    private static PlayerController PickHighestTarget(PlayerController self)
     {
-        List<PlayerController> candidates = new();
+        PlayerController best = null;
+        float bestY = float.NegativeInfinity;
 
-        foreach (PlayerController player in Object.FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
+        foreach (PlayerController player in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
         {
-            if (player != self && player.isOnGame)
-                candidates.Add(player);
+            if (player == self || !player.isOnGame) continue;
+
+            float y = player.transform.position.y;
+            if (y <= bestY) continue;
+
+            bestY = y;
+            best  = player;
         }
 
-        if (candidates.Count == 0) return null;
-
-        return candidates[Random.Range(0, candidates.Count)];
+        return best;
     }
 }

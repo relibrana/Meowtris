@@ -55,6 +55,19 @@ public sealed class BlockDamageable : MonoBehaviour, IDamageable
         RefreshColor();
     }
 
+    /// <summary>
+    /// Takes this sub-block out of play without it having been damaged: the
+    /// sub-blocks BlockOverlapCheck hides because they spawned inside another
+    /// block. It has to count as a death for the parent — otherwise the piece
+    /// never reaches zero living children and never returns to the pool.
+    /// </summary>
+    public void RemoveFromPlay()
+    {
+        if (_currentLife <= 0) return;
+
+        Die();
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private void Die()

@@ -9,8 +9,17 @@ using UnityEngine;
 public sealed class MocoProjectile : ThrowableItem
 {
     [Header("Moco")]
-    [SerializeField, Min(1), Tooltip("Pulsaciones del botón de patada para liberarse.")]
+    [SerializeField, Min(1), Tooltip("Puntos de forcejeo para liberarse (1 punto = 1 pulsación de movimiento).")]
     private int strugglePresses = 8;
+
+    [SerializeField, Min(0f), Tooltip("Puntos que aporta cada patada.")]
+    private float kickStrugglePoints = 2f;
+
+    [SerializeField, Min(0f), Tooltip("Puntos que aporta cada pulsación de movimiento (izq/der).")]
+    private float moveStrugglePoints = 1f;
+
+    [SerializeField, Min(0f), Tooltip("Puntos que se descargan por segundo: hay que machacar más rápido que esto. 0 = barra sin descarga.")]
+    private float struggleDrainPerSecond = 3f;
 
     [SerializeField, Min(0.5f), Tooltip("Tope de tiempo pegado (accesibilidad): se libera solo al cumplirse.")]
     private float maxStuckSeconds = 3f;
@@ -76,7 +85,13 @@ public sealed class MocoProjectile : ThrowableItem
         if (!victim.TryGetComponent(out MocoStuckState state))
             state = victim.gameObject.AddComponent<MocoStuckState>();
 
-        state.Activate(strugglePresses, maxStuckSeconds, stuckTint);
+        state.Activate(
+            strugglePresses,
+            kickStrugglePoints,
+            moveStrugglePoints,
+            struggleDrainPerSecond,
+            maxStuckSeconds,
+            stuckTint);
     }
 
     protected override void OnDisable()

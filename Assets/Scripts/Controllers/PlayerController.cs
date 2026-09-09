@@ -129,6 +129,7 @@ public sealed class PlayerController : MonoBehaviour, IKickable
     private void SubscribeToInputEvents()
     {
         _inputHandler.OnKickPressed       += HandleKick;
+        _inputHandler.OnMovePressed       += HandleMovePress;
         _inputHandler.OnPlaceBlockPressed += HandlePlaceBlock;
         _inputHandler.OnCluckPressed      += HandleCluck;
         _inputHandler.OnPausePressed      += HandlePause;
@@ -140,6 +141,7 @@ public sealed class PlayerController : MonoBehaviour, IKickable
         if (_inputHandler == null) return;
 
         _inputHandler.OnKickPressed       -= HandleKick;
+        _inputHandler.OnMovePressed       -= HandleMovePress;
         _inputHandler.OnPlaceBlockPressed -= HandlePlaceBlock;
         _inputHandler.OnCluckPressed      -= HandleCluck;
         _inputHandler.OnPausePressed      -= HandlePause;
@@ -167,7 +169,7 @@ public sealed class PlayerController : MonoBehaviour, IKickable
         // Stuck in moco: the kick press becomes the struggle input.
         if (TryGetComponent(out MocoStuckState stuck) && stuck.IsActive)
         {
-            stuck.OnStrugglePress();
+            stuck.OnStrugglePress(fromKick: true);
             return;
         }
 
@@ -180,6 +182,19 @@ public sealed class PlayerController : MonoBehaviour, IKickable
             transform.position,
             Vector2.right * transform.localScale.x
         );
+    }
+
+    /// <summary>
+    /// Movement presses only matter here while stuck in moco: they feed the
+    /// struggle bar (less than a kick) so the player is never left mashing a
+    /// single button. Outside that state the axis is read by PlayerMovement.
+    /// </summary>
+    private void HandleMovePress()
+    {
+        if (IsOnPause()) return;
+
+        if (TryGetComponent(out MocoStuckState stuck) && stuck.IsActive)
+            stuck.OnStrugglePress(fromKick: false);
     }
 
     private void HandlePlaceBlock()
@@ -293,6 +308,12 @@ public sealed class PlayerController : MonoBehaviour, IKickable
 
     /// <summary>Instantly moves the player (teleport item).</summary>
     public void TeleportTo(Vector2 position) => _movement.Teleport(position);
+
+    /// <summary>
+    /// Grants extra mid-air jumps. Used by the teleporte to give the user a
+    /// single courtesy jump after reappearing in the air.
+    /// </summary>
+    public void GrantAirJump(int count = 1) => _movement.AirJumpsRemaining += count;
 
     /// <summary>Drops the currently held block. Called on death and reset.</summary>
     public void DropBlock() => _blockHandler.DropBlock();

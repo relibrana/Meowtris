@@ -55,6 +55,13 @@ public sealed class PlayerMovement : MonoBehaviour
     /// <summary>Gravity multiplier (pollo metálico). 1 = normal.</summary>
     public float GravityMultiplier { get; set; } = 1f;
 
+    /// <summary>Extra gravity applied only while falling (pollo metálico: mismo
+    /// salto, caída más pesada). 1 = normal.</summary>
+    public float FallGravityMultiplier { get; set; } = 1f;
+
+    /// <summary>While false, holding jump no longer glides (pollo metálico).</summary>
+    public bool GlideEnabled { get; set; } = true;
+
     /// <summary>Air jumps left (doble salto). Consumed by HandleJump when airborne past coyote.</summary>
     public int AirJumpsRemaining { get; set; }
 
@@ -275,21 +282,29 @@ public sealed class PlayerMovement : MonoBehaviour
 
         float gravity = _calculatedGravity * GravityMultiplier;
 
+        // Falling can be heavier than rising (pollo metálico: no recorta el salto,
+        // solo hace la caída más rápida). Se decide antes de integrar para que
+        // todo el tick de descenso use la misma gravedad.
+        if (_currentVelocity.y < 0f)
+            gravity *= FallGravityMultiplier;
+
         _currentVelocity.y += gravity * Time.deltaTime;
 
         if (_currentVelocity.y < 0f)
         {
-            float glideMultiplier = _isHoldingJump ? valuesSO.glideResistance : 0f;
-            int   fallLimit       = _isHoldingJump ? -4 : -25;
+            bool  isGliding       = _isHoldingJump && GlideEnabled;
+            float glideMultiplier = isGliding ? valuesSO.glideResistance : 0f;
+            // El tope de caída también escala con el peso: si no, un pollo pesado
+            // solo llegaría antes al mismo límite en vez de caer más rápido.
+            float fallLimit       = isGliding ? -4f : -25f * FallGravityMultiplier;
 
-            bool nowGliding = _isHoldingJump;
-            if (nowGliding != _isGliding)
+            if (isGliding != _isGliding)
             {
-                _isGliding = nowGliding;
+                _isGliding = isGliding;
                 OnGlideStateChanged?.Invoke(_isGliding);
             }
 
-            _animController?.SetGliding(_isHoldingJump);
+            _animController?.SetGliding(isGliding);
 
             float nextY = _currentVelocity.y
                         + gravity * (valuesSO.fallMultiplier - 1f - glideMultiplier) * Time.deltaTime;

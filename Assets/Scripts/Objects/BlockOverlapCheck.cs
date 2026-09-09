@@ -35,6 +35,16 @@ public class BlockOverlapCheck : MonoBehaviour
     
     public void DisableBlock()
     {
+        // Un sub-bloque escondido tiene que contar como muerto para el
+        // BlockScript padre. Si no, queda vivo e inalcanzable (sin collider
+        // nadie puede dañarlo) y la pieza no vuelve al pool aunque
+        // rompas todo lo visible.
+        if (TryGetComponent(out BlockDamageable damageable))
+        {
+            damageable.RemoveFromPlay();
+            return;
+        }
+
         _boxCollider2D.enabled = false;
         _spriteRenderer.enabled = false;
     }

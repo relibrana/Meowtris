@@ -19,7 +19,10 @@ public class KickCollider : MonoBehaviour
 
         if(other.attachedRigidbody && other.attachedRigidbody.TryGetComponent(out IKickable kickable))
         {
-            if (superActive && kickable is PlayerController victim && victim != playerController && victim.isOnGame)
+            PlayerController victim = kickable as PlayerController;
+            bool validVictim = victim != null && victim != playerController && victim.isOnGame;
+
+            if (superActive && validVictim)
             {
                 victim.OnDeath();
             }
@@ -35,6 +38,16 @@ public class KickCollider : MonoBehaviour
                     impulseDirection *= metal.KickMultiplier;
 
                 kickable.ReceiveKick(impulseDirection);
+
+                // La papa caliente se pasa pateando, no por contacto de colliders
+                // (diseño, sep 2026). Se resuelve aquí y no dentro de ReceiveKick
+                // porque el pollo metálico ignora el empuje pero sí debe recibirla.
+                if (validVictim
+                    && playerController != null
+                    && playerController.TryGetComponent(out HotPotatoState potato))
+                {
+                    potato.TryTransferByKick(victim);
+                }
             }
         }
         if(other.TryGetComponent(out IDamageable damageable))

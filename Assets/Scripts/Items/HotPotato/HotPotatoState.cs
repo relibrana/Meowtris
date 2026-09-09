@@ -2,14 +2,21 @@ using UnityEngine;
 
 /// <summary>
 /// Papa caliente (item catalog #6). The carrier gets a speed buff and a fuse;
-/// touching another player transfers potato and remaining fuse to them. If it
-/// expires on you, you die and the blast pushes nearby players and damages
-/// blocks. The tint pulses faster as the fuse runs out (visible-timer
-/// placeholder until real UI/VFX).
+/// KICKING another player transfers potato and remaining fuse to them — contact
+/// alone does nothing (diseño, sep 2026: pasarla tiene que ser deliberado).
+///
+/// The fuse is an ABSOLUTE window (diseño, sep 2026): it starts when the potato
+/// appears and keeps running across every hand-off — a transfer never resets it
+/// nor restarts the warning. Whoever holds it when it hits zero dies, no matter
+/// how recently they got it. That is why the transfer carries BOTH the time left
+/// and the original window: the blink accelerates against the whole window, not
+/// against each carrier's slice of it.
 /// </summary>
 public sealed class HotPotatoState : PlayerItemState
 {
-    private float _fuseTotal;
+    /// <summary>Full window the potato was created with. Survives every transfer.</summary>
+    private float _fuseWindow;
+
     private float _speedMultiplier = 1f;
     private float _explosionRadius;
     private float _explosionImpulse;
@@ -21,6 +28,10 @@ public sealed class HotPotatoState : PlayerItemState
 
     private const float TransferImmunitySeconds = 0.5f;
 
+    /// <summary>Seconds left on the shared timer. For the HUD once real UI exists.</summary>
+    public float FuseRemaining => IsActive ? Remaining : 0f;
+
+    /// <summary>Fresh potato out of a capsule: the window starts now.</summary>
     public void Activate(
         float fuseSeconds,
         float speedMultiplier,
@@ -30,7 +41,28 @@ public sealed class HotPotatoState : PlayerItemState
         LayerMask explosionLayers,
         Color tint)
     {
-        _fuseTotal            = fuseSeconds;
+        Begin(
+            fuseSeconds,
+            fuseSeconds,
+            speedMultiplier,
+            explosionRadius,
+            explosionImpulse,
+            explosionBlockDamage,
+            explosionLayers,
+            tint);
+    }
+
+    private void Begin(
+        float remaining,
+        float window,
+        float speedMultiplier,
+        float explosionRadius,
+        float explosionImpulse,
+        int explosionBlockDamage,
+        LayerMask explosionLayers,
+        Color tint)
+    {
+        _fuseWindow           = Mathf.Max(remaining, window);
         _speedMultiplier      = speedMultiplier;
         _explosionRadius      = explosionRadius;
         _explosionImpulse     = explosionImpulse;
@@ -39,7 +71,7 @@ public sealed class HotPotatoState : PlayerItemState
         _baseTint             = tint;
         _noTransferUntil      = Time.time + TransferImmunitySeconds;
 
-        BeginState(fuseSeconds, tint);
+        BeginState(remaining, tint);
     }
 
     protected override void OnStateStarted() => Movement.SpeedMultiplier = _speedMultiplier;
@@ -48,8 +80,10 @@ public sealed class HotPotatoState : PlayerItemState
 
     protected override void OnTick()
     {
-        // Pulse speeds up as the fuse shortens: ~2 Hz early, ~8 Hz at the end.
-        float urgency   = 1f - Mathf.Clamp01(Remaining / Mathf.Max(0.01f, _fuseTotal));
+        // Pulse speeds up as the shared window runs out: ~2 Hz early, ~8 Hz at
+        // the end. Measured against _fuseWindow, so a hand-off does not reset
+        // the warning — the new carrier picks it up already blinking fast.
+        float urgency   = 1f - Mathf.Clamp01(Remaining / Mathf.Max(0.01f, _fuseWindow));
         float frequency = Mathf.Lerp(2f, 8f, urgency);
         float wave      = 0.5f + 0.5f * Mathf.Sin(Time.time * frequency * 2f * Mathf.PI);
 
@@ -62,16 +96,19 @@ public sealed class HotPotatoState : PlayerItemState
         EndState();
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
+    /// <summary>
+    /// Called by KickCollider when the carrier lands a kick on another player.
+    /// The short grace after receiving it stops the potato from ping-ponging
+    /// between two players trading kicks in the same instant.
+    /// </summary>
+    public bool TryTransferByKick(PlayerController victim)
     {
-        if (!IsActive) return;
-        if (Time.time < _noTransferUntil) return;
+        if (!IsActive) return false;
+        if (Time.time < _noTransferUntil) return false;
+        if (victim == null || victim == Controller || !victim.isOnGame) return false;
 
-        Rigidbody2D body = collision.collider.attachedRigidbody;
-        if (body == null || !body.TryGetComponent(out PlayerController other)) return;
-        if (other == Controller || !other.isOnGame) return;
-
-        TransferTo(other);
+        TransferTo(victim);
+        return true;
     }
 
     private void TransferTo(PlayerController receiver)
@@ -79,8 +116,11 @@ public sealed class HotPotatoState : PlayerItemState
         if (!receiver.TryGetComponent(out HotPotatoState theirs))
             theirs = receiver.gameObject.AddComponent<HotPotatoState>();
 
-        theirs.Activate(
+        // Time left AND the original window travel together: the countdown is
+        // one continuous clock owned by the potato, not by whoever holds it.
+        theirs.Begin(
             Remaining,
+            _fuseWindow,
             _speedMultiplier,
             _explosionRadius,
             _explosionImpulse,
