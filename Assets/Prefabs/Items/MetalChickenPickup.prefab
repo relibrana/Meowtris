@@ -47,5 +47,5 @@ MonoBehaviour:
   duration: 6
   jumpMultiplier: 1
   gravityMultiplier: 1
-  kickMultiplier: 10
+  kickMultiplier: 3
   metalTint: {r: 0.62, g: 0.66, b: 0.72, a: 1}

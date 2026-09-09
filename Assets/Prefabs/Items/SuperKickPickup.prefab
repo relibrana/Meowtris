@@ -42,9 +42,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c02dcd82d296cb847b951e30c3bf6be2, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  duration: 4
-  blockDamage: 3
-  impulseMultiplier: 1.5
+  m_Name: 
+  m_EditorClassIdentifier: 
+  duration: 5
+  blockDamage: 1
+  impulseMultiplier: 2
   carrierTint: {r: 1, g: 0.55, b: 0.1, a: 1}

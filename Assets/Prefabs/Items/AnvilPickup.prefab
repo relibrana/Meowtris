@@ -42,10 +42,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: af9344367ea0bc24b8e9330c636c6dd5, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  anvilPrefab: {fileID: 3000000000000000001, guid: 841c246b11c64b788405a4402f8ffbd0, type: 3}
-  fallSpeed: 14
+  m_Name: 
+  m_EditorClassIdentifier: 
+  anvilPrefab: {fileID: 3000000000000000001, guid: 841c246b11c64b788405a4402f8ffbd0,
+    type: 3}
+  fallSpeed: 10
   telegraphSeconds: 1
   stopOnKill: 0
   spawnMargin: 1.5
