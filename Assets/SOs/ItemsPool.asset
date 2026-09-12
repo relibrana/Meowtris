@@ -15,7 +15,7 @@ MonoBehaviour:
   items:
   - prefab: {fileID: 7813419518495331685, guid: 96e68a523af779e4caa7fc06d9bb9091,
       type: 3}
-    chance: 0
+    chance: 100
   - prefab: {fileID: 8723323982620638141, guid: e9f0d56f280e4ad4ca88cdf415d08ed7,
       type: 3}
     chance: 0
@@ -33,7 +33,7 @@ MonoBehaviour:
     chance: 0
   - prefab: {fileID: 1000000000000000001, guid: 31366d7fb11040adbe451958b0bfcf12,
       type: 3}
-    chance: 100
+    chance: 0
   - prefab: {fileID: 1000000000000000001, guid: 4b4631afaad14a5bae26bf8ba1b66be6,
       type: 3}
     chance: 0
